@@ -1,0 +1,432 @@
+# Inclusão e Tratamento de dados CadUnico municipal
+
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Informações gerais
+
+O código abaixo foi criado pela Vigilância Socioassistencial municipal de Palhoça com o objetivo de inserção dos dados municipais extraídos do CECAD no R.  Os arquivos baixados do CECAD foram salvos em uma pasta com o nome "Original_fevereiro_2017", pelo conteúdo com o qual trabalhei ser referente ao mês de fevereiro.
+
+### Arquivos compactados
+Os arquivos baixados do CECAD são compactados, em formato ".zip", sendo possível descompactá-lo utilizando algum software instalado no computador, ou até mesmo com novas versões do Windows e Officce, que realizam essa ação automaticamente.  
+Porém, também é possível descompactar arquivos com o próprio R. Para tal, exemplifico com o códido abaixo. Importante destacar que renomeei os arquivos ".zip" com os nomes "domicilio" e "pessoa", respectivamente para as planilhas com informações familiares e informações individuais.  
+Outra informação, é importante informar ao R em qual pasta está o arquivo. Para descobrir qual a pasta (diretório) com a qual o R está trabalhando no momento utilize a função getwd() e para alterar para a pasta (diretório) desejado basta utilizar a função setwd().
+
+```{r eval=FALSE}
+# setwd("~/ <informar o caminho de pastas até a que contém os arquivos que serão utilizados>")
+unzip("domicilio.zip")
+unzip("pessoa.zip")
+```
+
+ 
+### Pacotes
+Inicialmente informo ao R que serão utilizados os pacotes "readr" e "dplyr", os quais já devem estar instalados. Caso não tenha algum dos pacotes listado no RStudio em Packages, basta seguir operação descrita em Install.
+
+```{r eval=FALSE}
+library(readr)
+library(dplyr)
+```
+
+### Puxar os arquivos de dados para dentro do R
+
+Com o código abaixo o R lê os arquivos e eles são alocados em duas variáveis, "domicilio" para o arquivo "domicilio.csv", e "pessoa" para o arquivo "pessoa.csv". Renomeei as planilhas para facilitar o uso e os nomes atribuídos foram uma escolha pessoal, podendo ser alterados. Mas, destaca-se que esses nomes serão utilizados em diversos momentos ao longo do tratamento dos dados, assim, caso decida alterar os nomes, terá de fazê-lo em todos os locais que aparecerem.  
+Com a função "select" escolho variáveis, no caso numeradas por colunas. Com o sinal "-" informo que estas variáveis, ou, colunas, devem ser excluídas. Realizo este procedimento por não ter interesse nas variáveis destas colunas.
+
+
+
+```{r eval=FALSE}
+domicilio <- read_delim("~/ <informar o caminho de pastas até a que contém os arquivos que serão utilizados>",
+                        ";",escape_double = FALSE,
+                        col_types = cols(dat_atual_fam = col_date(format = "%Y-%m-%d"),
+                                         dat_cadastramento_fam = col_date(format = "%Y-%m-%d")),
+                        trim_ws = TRUE) %>%
+  select(c(-1,-5:-7,-12:-14,-16:-20,-40,-43,-46,-59,-61,-63))
+pessoa <- read_delim("~/<informar o caminho de pastas até a que contém os arquivos que serão utilizados>", 
+                     ";", escape_double = FALSE, trim_ws = TRUE) %>%
+  select(c(-1,-3,-5,-7,-12,-13,-16,-17,-23:-25,-27:-33,-35:-46,-64,-66:-67))
+```
+
+
+
+### Redefinir classes de variáveis
+
+As variáveis podem ser lógicas (logical), textos (character), numéricas (integer), categóricas (factor), sendo que as categóricas podem ser ordenadas. A definição de classes permite empregar métodos para análise dos dados.
+
+#### Redefinindo classes para informações domiciliares / familiares
+
+```{r eval=FALSE}
+domicilio$fx_rfpc = factor(domicilio$fx_rfpc,
+                           levels = c(1:4),
+                           ordered = TRUE,
+                           labels = c("R$<77,00",
+                                      "77,01<R$<154,00",
+                                      "154,01<R$<1/2 sal.minimo",
+                                      "R$>1/2 sal. minimo"))
+domicilio$marc_pbf = factor(domicilio$marc_pbf,
+                            levels = c(0,1),
+                            labels=c("Nao","Sim"))
+domicilio$cod_local_domic_fam = factor(domicilio$cod_local_domic_fam,
+                                       levels = c(1,2),
+                                       labels = c("Urbanas","Rural"))
+domicilio$cod_especie_domic_fam = factor(domicilio$cod_especie_domic_fam,
+                                         levels = c(1:3),
+                                         labels=c("Particular Permanente",
+                                                  "Particular Improvisado",
+                                                  "Coletivo"))
+domicilio$cod_material_piso_fam = factor(domicilio$cod_material_piso_fam,
+                                         levels = c(1:7),
+                                         labels=c("Terra","Cimento",
+                                                  "Madeira Aproveitada",
+                                                  "Madeira Aparelhada",
+                                                  "Ceramica, Lajota ou pedra",
+                                                  "Carpete","Outro"))
+domicilio$cod_material_domic_fam = factor(domicilio$cod_material_domic_fam,
+                                          levels = c(1:8),
+                                          labels=c("Alvenaria/tijolo com revestimento",
+                                                   "Alvenaria/tijolo sem revestimento",
+                                                   "Madeira aparelhada",
+                                                   "Taipa revestida",
+                                                   "Taipa nao revestida",
+                                                   "Madeira Aproveitada",
+                                                   "Palha","Outro material"))
+domicilio$cod_abaste_agua_domic_fam = factor(domicilio$cod_abaste_agua_domic_fam,
+                                             levels = c(1:4),
+                                             labels=c("Rede geral de distribuicao",
+                                                      "Poco ou nascente",
+                                                      "Cisterna","Outra forma"))
+domicilio$cod_escoa_sanitario_domic_fam = factor(domicilio$cod_escoa_sanitario_domic_fam,
+                                                 levels = c(1:6),
+                                                 labels=c("Rede coletora de esgoto ou pluvial",
+                                                          "Fossa septica",
+                                                          "Fossa rudimentar",
+                                                          "Vala a ceu aberto",
+                                                          "Direto para um rio, lago ou mar",
+                                                          "Outra forma"))
+domicilio$cod_destino_lixo_domic_fam = factor(domicilio$cod_destino_lixo_domic_fam,
+                                              levels = c(1:6),
+                                              labels=c("Coletado diretamente",
+                                                       "Coletado indiretamente",
+                                                       "Queimado ou enterrado na propriedade",
+                                                       "Jogado em terreno baldio",
+                                                       "Jogado em rio ou mar",
+                                                       "Outro destino"))
+domicilio$cod_iluminacao_domic_fam = factor(domicilio$cod_iluminacao_domic_fam,
+                                            levels = c(1:6),
+                                            labels=c("Eletrica com medidor proprio",
+                                                     "Eletrica com medidor comunitario",
+                                                     "Eletrica sem medidor",
+                                                     "Oleo, queroseno ou gas",
+                                                     "Vela","Outra forma"))
+domicilio$cod_calcamento_domic_fam = factor(domicilio$cod_calcamento_domic_fam,
+                                            levels = c(1:3),
+                                            labels=c("Total",
+                                                     "Parcial",
+                                                     "Inexistente"))
+domicilio$ind_parc_mds_fam = factor(domicilio$ind_parc_mds_fam,
+                                    levels = c(101,201,
+                                               202,203,
+                                               204,205,
+                                               301,302,
+                                               303,304,
+                                               305,306,
+                                               0),
+                                    labels=c("Familia cigana","Familia extrativista",
+                                             "Familia de pescadores artesanais",
+                                             "Familia pertencente a comunidade de Terreiro",
+                                             "Familia ribeirinha",
+                                             "Familia agricultores familiares",
+                                             "Familia assentada da reforma agraria",
+                                             "Familia benefi. do Prog. Nac. de Credito Fundiario",
+                                             "Familia acampada",
+                                             "Familia atingida por empreendimento de infraestrutura",
+                                             "Familia de preso do Sistema Carcerario",
+                                             "Familia catadores de material reciclavel",
+                                             "Nenhuma"))
+domicilio[,c("cod_agua_canalizada_fam",
+             "cod_banheiro_domic_fam",
+             "cod_familia_indigena_fam",
+             "cod_indigena_reside_fam",
+             "ind_familia_quilombola_fam")] <- lapply(domicilio[,c("cod_agua_canalizada_fam",
+                                                                   "cod_banheiro_domic_fam",
+                                                                   "cod_familia_indigena_fam",
+                                                                   "cod_indigena_reside_fam",
+                                                                   "ind_familia_quilombola_fam")],
+                                                      factor,levels = c(1,2),
+                                                      labels = c("Sim","Nao"))
+```
+
+#### Redefinindo classes para informações pessoais / indivíduos
+
+```{r eval=FALSE}
+pessoa$cod_sexo_pessoa = factor(pessoa$cod_sexo_pessoa,
+                                levels = c(1,2),
+                                labels = c("Masculino","Feminino"))
+pessoa$cod_parentesco_rf_pessoa = factor(pessoa$cod_parentesco_rf_pessoa,
+                                         levels = c(1:11),
+                                         labels = c("Responsavel pela unidade familiar",
+                                                    "Conjuge ou companheiro","Filho(a)",
+                                                    "Enteado(a)","Neto(a) ou Bisneto(a)",
+                                                    "Pai ou mae", "Sogro","Irmao ou irma",
+                                                    "Genro ou nora","Outro parente",
+                                                    "Nao parente"))
+pessoa$cod_raca_cor_pessoa = factor(pessoa$cod_raca_cor_pessoa,
+                                    levels = c(1:5),
+                                    labels = c("Branca","Preta",
+                                               "Amarela","Parda",
+                                               "Indigena"))
+pessoa$cod_local_nascimento_pessoa = factor(pessoa$cod_local_nascimento_pessoa,
+                                            levels = c(1:3),
+                                            labels = c("Neste municipio",
+                                                       "Outro municipio",
+                                                       "Outro pais"))
+pessoa$cod_certidao_registrada_pessoa = factor(pessoa$cod_certidao_registrada_pessoa,
+                                               levels = c(1:4),
+                                               labels = c("Com registro em cartorio e com Certidao",
+                                                          "Com registro em cartorio, mas sem Certidao",
+                                                          "Nao","Nao sabe"))
+pessoa$fx_idade = factor(pessoa$fx_idade,ordered = TRUE,
+                         levels = c(0:12),
+                         labels = c("0 a 4","5 a 6","7 a 15",
+                                    "16 a 17","18 a 24","25 a 34",
+                                    "35 a 39","40 a 44","45 a 49",
+                                    "50 a 54","55 a 59","60 a 64",
+                                    "maior que 65"))
+pessoa$ind_frequenta_escola_memb = factor(pessoa$ind_frequenta_escola_memb,
+                                          levels = c(1:4),
+                                          labels = c("Rede publica",
+                                                     "Rede particular",
+                                                     "Ja frequentou",
+                                                     "Nunca frequentou"))
+pessoa$cod_curso_frequenta_memb = factor(pessoa$cod_curso_frequenta_memb,ordered = TRUE,
+                                         levels = c(1:14),
+                                         labels = c("Creche",
+                                                    "Pre-escola(exceto CA)",
+                                                    "Classe de alfabetizacao",
+                                                    "Ensino Fundamental regular-8 anos",
+                                                    "Ensino Fundamental regular-9 anos",
+                                                    "Ensino Fundamental especial",
+                                                    "Ensino Medio regular",
+                                                    "Ensino Medio especial",
+                                                    "Ensino Fundamental EJA-1 a 4",
+                                                    "Ensino Fundamental EJA-5 a 8",
+                                                    "Ensino Medio EJA",
+                                                    "Alfabetizacao para adultos-Mobral",
+                                                    "Superior,Aperfeicoamento,Especializacao, Mestrado,Doutorado",
+                                                    "Pre-vestibular"))
+pessoa$cod_curso_frequentou_pessoa_memb = factor(pessoa$cod_curso_frequentou_pessoa_memb,ordered = TRUE,
+                                                 levels = c(1:15),
+                                                 labels = c("Creche",
+                                                            "Pre-escola (exceto CA)",
+                                                            "Classe de Alfabetizacao-CA",
+                                                            "Ensino Fundamental 1-4, Elementar (Primario)",
+                                                            "Ensino Fundamental 5-8, Meio 1 ciclo (Ginasial)",
+                                                            "Ensino Fundamental -9 anos",
+                                                            "Ensino Fundamental especial",
+                                                            "Ensino Medio, 2 grau,Medio 2 ciclo (Cient,Tec, Normal)",
+                                                            "Ensino Medio especial",
+                                                            "Ensino Fundamental EJA -1 a 4",
+                                                            "Ensino Fundamental EJA -5 a 8",
+                                                            "Ensino Medio EJA",
+                                                            "Superior,Aperf,Espec, Mestrado,Doutorado",
+                                                            "Alfabetizaco para adultos-Mobral",
+                                                            "Nenhum"))
+pessoa$cod_principal_trab_memb = factor(pessoa$cod_principal_trab_memb,levels = c(1:11),
+                                        labels = c("Autonomo",
+                                                   "Trabalhador temporario rural",
+                                                   "Empregado sem CT assinada",
+                                                   "Empregado com CT assinada",
+                                                   "Trabalhador domestico sem CT assinada",
+                                                   "Trabalhador domestico com CT assinada",
+                                                   "Trabalhador nao remunerado",
+                                                   "Militar ou servidor publico",
+                                                   "Empregador",
+                                                   "Estagiario",
+                                                   "Aprendiz"))
+pessoa$cod_contato_parente_memb = factor(pessoa$cod_contato_parente_memb,
+                                         levels = c(1:6),
+                                         labels = c("Todo dia",
+                                                    "Toda semana",
+                                                    "Todo Mes",
+                                                    "Todo ano",
+                                                    "Quase nunca",
+                                                    "Nunca"))
+pessoa$cod_cart_assinada_memb = factor(pessoa$cod_cart_assinada_memb,
+                                       levels = c(1:3),
+                                       labels = c("Sim","Nao","Nao sabe"))
+pessoa[,c("cod_ano_serie_frequenta_memb",
+          "cod_ano_serie_frequentou_memb")] <-lapply(pessoa[,c("cod_ano_serie_frequenta_memb",
+                                                               "cod_ano_serie_frequentou_memb")],
+                                                     factor,levels = c(1:10),
+                                                     labels = c("Primeiro",
+                                                                "Segundo","Terceiro",
+                                                                "Quarto","Quinto",
+                                                                "Sexto","Setimo",
+                                                                "Oitavo","Nono",
+                                                                "Curso nao-seriado"))
+pessoa[,c("ind_trabalho_infantil_pessoa",
+          "cod_deficiencia_memb",
+          "cod_sabe_ler_escrever_memb",
+          "cod_escola_local_memb",
+          "cod_concluiu_frequentou_memb",
+          "cod_trabalhou_memb",
+          "cod_afastado_trab_memb",
+          "cod_agricultura_trab_memb",
+          "cod_trabalho_12_meses_memb",
+          "cod_vive_fam_rua_memb")] <- lapply(pessoa[,c("ind_trabalho_infantil_pessoa",
+                                                        "cod_deficiencia_memb",
+                                                        "cod_sabe_ler_escrever_memb",
+                                                        "cod_escola_local_memb",
+                                                        "cod_concluiu_frequentou_memb",
+                                                        "cod_trabalhou_memb",
+                                                        "cod_afastado_trab_memb",
+                                                        "cod_agricultura_trab_memb",
+                                                        "cod_trabalho_12_meses_memb",
+                                                        "cod_vive_fam_rua_memb")],
+                                                   factor,levels = c(1,2),
+                                                   labels = c("Sim","Nao"))
+pessoa[,c("marc_sit_rua",
+          "marc_pbf",
+          "ind_def_cegueira_memb",
+          "ind_def_baixa_visao_memb",
+          "ind_def_surdez_profunda_memb",
+          "ind_def_surdez_leve_memb",
+          "ind_def_fisica_memb",
+          "ind_def_mental_memb",
+          "ind_def_sindrome_down_memb",
+          "ind_def_transtorno_mental_memb",
+          "ind_ajuda_nao_memb",
+          "ind_ajuda_familia_memb",
+          "ind_ajuda_especializado_memb",
+          "ind_ajuda_vizinho_memb",
+          "ind_ajuda_instituicao_memb",
+          "ind_ajuda_outra_memb",
+          "ind_dormir_rua_memb",
+          "ind_dormir_albergue_memb",
+          "ind_dormir_dom_part_memb",
+          "ind_outro_memb",
+          "ind_motivo_perda_memb",
+          "ind_motivo_ameaca_memb",
+          "ind_motivo_probs_fam_memb",
+          "ind_motivo_alcool_memb",
+          "ind_motivo_desemprego_memb",
+          "ind_motivo_trabalho_memb",
+          "ind_motivo_saude_memb",
+          "ind_motivo_pref_memb",
+          "ind_motivo_outro_memb",
+          "ind_motivo_nao_sabe_memb",
+          "ind_ativ_com_escola_memb",
+          "ind_ativ_com_coop_memb",
+          "ind_ativ_com_mov_soc_memb",
+          "ind_ativ_com_nao_sabe_memb",
+          "ind_ativ_com_nao_resp_memb",
+          "ind_atend_cras_memb",
+          "ind_atend_creas_memb",
+          "ind_atend_centro_ref_rua_memb",
+          "ind_atend_inst_gov_memb",
+          "ind_atend_inst_nao_gov_memb",
+          "ind_atend_hospital_geral_memb",
+          "ind_dinh_const_memb",
+          "ind_dinh_flanelhinha_memb",
+          "ind_dinh_carregador_memb",
+          "ind_dinh_catador_memb",
+          "ind_dinh_servs_gerais_memb",
+          "ind_dinh_pede_memb",
+          "ind_dinh_vendas_memb",
+          "ind_dinh_outro_memb",
+          "ind_dinh_nao_resp_memb",
+          "ind_atend_nenhum_memb")] <- lapply(pessoa[,c("marc_sit_rua",
+                                                        "marc_pbf",
+                                                        "ind_def_cegueira_memb",
+                                                        "ind_def_baixa_visao_memb",
+                                                        "ind_def_surdez_profunda_memb",
+                                                        "ind_def_surdez_leve_memb",
+                                                        "ind_def_fisica_memb",
+                                                        "ind_def_mental_memb",
+                                                        "ind_def_sindrome_down_memb",
+                                                        "ind_def_transtorno_mental_memb",
+                                                        "ind_ajuda_nao_memb",
+                                                        "ind_ajuda_familia_memb",
+                                                        "ind_ajuda_especializado_memb",
+                                                        "ind_ajuda_vizinho_memb",
+                                                        "ind_ajuda_instituicao_memb",
+                                                        "ind_ajuda_outra_memb",
+                                                        "ind_dormir_rua_memb",
+                                                        "ind_dormir_albergue_memb",
+                                                        "ind_dormir_dom_part_memb",
+                                                        "ind_outro_memb",
+                                                        "ind_motivo_perda_memb",
+                                                        "ind_motivo_ameaca_memb",
+                                                        "ind_motivo_probs_fam_memb",
+                                                        "ind_motivo_alcool_memb",
+                                                        "ind_motivo_desemprego_memb",
+                                                        "ind_motivo_trabalho_memb",
+                                                        "ind_motivo_saude_memb",
+                                                        "ind_motivo_pref_memb",
+                                                        "ind_motivo_outro_memb",
+                                                        "ind_motivo_nao_sabe_memb",
+                                                        "ind_ativ_com_escola_memb",
+                                                        "ind_ativ_com_coop_memb",
+                                                        "ind_ativ_com_mov_soc_memb",
+                                                        "ind_ativ_com_nao_sabe_memb",
+                                                        "ind_ativ_com_nao_resp_memb",
+                                                        "ind_atend_cras_memb",
+                                                        "ind_atend_creas_memb",
+                                                        "ind_atend_centro_ref_rua_memb",
+                                                        "ind_atend_inst_gov_memb",
+                                                        "ind_atend_inst_nao_gov_memb",
+                                                        "ind_atend_hospital_geral_memb",
+                                                        "ind_dinh_const_memb",
+                                                        "ind_dinh_flanelhinha_memb",
+                                                        "ind_dinh_carregador_memb",
+                                                        "ind_dinh_catador_memb",
+                                                        "ind_dinh_servs_gerais_memb",
+                                                        "ind_dinh_pede_memb",
+                                                        "ind_dinh_vendas_memb",
+                                                        "ind_dinh_outro_memb",
+                                                        "ind_dinh_nao_resp_memb",
+                                                        "ind_atend_nenhum_memb")],
+                                                  factor,levels = c(0,1),
+                                                  labels = c("Nao","Sim"))
+pessoa[,c("cod_tempo_rua_memb",
+          "cod_tempo_cidade_memb")] <- lapply(pessoa[,c("cod_tempo_rua_memb",
+                                                        "cod_tempo_cidade_memb")],
+                                              factor,ordered=TRUE,
+                                              levels = c(1:6),
+                                              labels = c("ate 06 meses",
+                                                         "entre 06 meses e 1 ano",
+                                                         "entre 1 e 2 anos",
+                                                         "entre 2 e 5 anos",
+                                                         "entre 5 e 10 anos",
+                                                         "mais de 10 anos"))
+```
+
+### Limpar e organizar bairros
+
+Os cadastradores, por vezes, podem cometer pequenos erros de grafia ao registrarem o nome do bairro no qual a família reside, e com isso o R entende cada versão do nome do bairro como uma localidade diferente. Para organizar isso é necessário verificar quais são os nomes utilizados para os bairro no município e, localizados erros, proceder com a correção.  
+Para compreensão do código é importante notar o sinal utilizado "<-". O conteúdo que está a direita da seta é o nome correto do bairro que será usado para corrigirtodos os locais em que houver algum dos nomes que estão à esquerda da seta, ou seja, os nomes que estão errados.  
+Destaque especial para "NA", que é um padrão do R utilizado para indicar valor ausente. Abaixo, ele é também utilizado para substituir nomes que não tinham nenhuma correlação com os bairros do município, não sendo passíveis de uso. 
+
+```{r eval=FALSE}
+bairro<-as.character(domicilio[,4])
+bairro[bairro==""|bairro=="13"|bairro=="20373705764"|bairro==""|bairro=="RINCAO"]<-NA
+bairro[bairro=="nome_errado"|bairro=="nome_errado"]<-c("nome_correto")
+
+domicilio[,4]<-as.factor(bairro)  
+rm(bairro)
+```
+
+### Selecionar dados atualizados
+
+Para dados atualizados são considerados os cadastros realizados ou atualizados a até 02 anos da data da análise.  Seleção de dados domiciliares / famíliares atualizados
+
+```{r eval=FALSE}
+atual_domicilio <- domicilio[domicilio$dat_atual_fam>"2015-04-01",]
+```
+
+Seleção de dados individuais / membros das famílias, atualizados
+
+
+```{r eval=FALSE}
+atual_pessoa<-semi_join(pessoa,atual_domicilio,by="cod_familiar_fam")
+```
